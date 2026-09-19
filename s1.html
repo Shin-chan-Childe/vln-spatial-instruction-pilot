@@ -307,7 +307,8 @@ import * as THREE from './three.module.js';
 
     const params = new URLSearchParams(location.search);
     const isPreview = params.get('preview') === '1';
-    const pilotAssignment=VLNPilot.assignmentFor('S1');
+    const isNeutralBaseline=new URLSearchParams(location.search).get('trial')==='baseline';
+    const pilotAssignment=VLNPilot.assignmentFor(isNeutralBaseline?'B0':'S1');
     const assignment={condition:pilotAssignment.condition,group:'trajectory',persistentSide:pilotAssignment.cueTargetSide,occludedSide:pilotAssignment.nonCueTargetSide,persistentLabel:pilotAssignment.cueTargetLabel,occludedLabel:pilotAssignment.nonCueTargetLabel};
 
     const participantId = pilotAssignment.participantId;

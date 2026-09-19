@@ -1,15 +1,16 @@
 (function(){
   'use strict';
-  const VERSION='pilot-v2';
-  const STORE_KEY='vln_pilot_v2';
-  const SCENARIOS=['S1','S2','S3','S4'];
-  const ROUTES={S1:'s1.html',S2:'s2.html',S3:'s3.html',S4:'s4.html'};
-  const TITLES={S1:'Visibility Persistence',S2:'Heading / Motion Alignment',S3:'Future-Action Consistency',S4:'Distance Bias'};
+  const VERSION='pilot-v4';
+  const STORE_KEY='vln_pilot_v4';
+  const SCENARIOS=['S1','S2','S3','S4','B0'];
+  const ROUTES={S1:'s1.html',S2:'s2.html',S3:'s3.html',S4:'s4.html',B0:'s1.html?trial=baseline'};
+  const TITLES={S1:'Visibility Persistence',S2:'Heading / Motion Alignment',S3:'Future-Action Consistency',S4:'Distance Bias',B0:'Final observation'};
   const CONDITION_NAMES={
     S1:{experimental:'visibility-unequal',baseline:'visibility-equal'},
     S2:{experimental:'heading-unequal',baseline:'heading-equal'},
     S3:{experimental:'future-action-present',baseline:'future-action-absent'},
-    S4:{experimental:'distance-unequal',baseline:'distance-equal'}
+    S4:{experimental:'distance-unequal',baseline:'distance-equal'},
+    B0:{baseline:'neutral-equal'}
   };
   const QUESTIONS={
     q1:'Based on the instruction and what you just observed, which chair do you think the speaker most likely refers to?',
@@ -37,15 +38,16 @@
     const rotations=[['S1','S2','S3','S4'],['S2','S3','S4','S1'],['S3','S4','S1','S2'],['S4','S1','S2','S3']];
     const order=[...rotations[cell%4]];
     if(bit(participantId,'order-reverse'))order.reverse();
+    order.push('B0');
     const scenarios={};
     SCENARIOS.forEach((scenario,index)=>{
       const cueTargetId=bit(participantId,`${scenario}:cue-id`)?'target-2':'target-1';
       const cueTargetSide=bit(participantId,`${scenario}:side`)?'right':'left';
       const cueTargetLabel=bit(participantId,`${scenario}:label`)?'B':'A';
-      const condition=bit(participantId,`${scenario}:condition`)?'experimental':'baseline';
+      const condition=scenario==='B0'?'baseline':'experimental';
       scenarios[scenario]={scenario,condition,conditionName:CONDITION_NAMES[scenario][condition],cueTargetId,cueTargetSide,cueTargetLabel,nonCueTargetId:cueTargetId==='target-1'?'target-2':'target-1',nonCueTargetSide:cueTargetSide==='left'?'right':'left',nonCueTargetLabel:cueTargetLabel==='A'?'B':'A',orderIndex:order.indexOf(scenario)};
     });
-    return{participantId,createdAt:new Date().toISOString(),counterbalanceCell:cell,scenarioOrder:order,scenarios,completedScenarios:[]};
+    return{participantId,createdAt:new Date().toISOString(),counterbalanceCell:cell,scenarioOrder:order,baselineScenario:'B0',scenarios,completedScenarios:[]};
   }
   function createParticipant(forcedId){const store=load(),id=forcedId||makeId();store.participants[id]=makePlan(id);store.activeParticipantId=id;save(store);return store.participants[id]}
   function currentParticipant(){const store=load(),id=store.activeParticipantId;return id&&store.participants[id]?store.participants[id]:createParticipant()}
@@ -56,7 +58,7 @@
     if(forcedPid)participant=makePlan(forcedPid);else participant=currentParticipant();
     const base={...participant.scenarios[scenario]};
     if(isDebug){
-      const condition=params.get('condition');if(['experimental','baseline'].includes(condition)){base.condition=condition;base.conditionName=CONDITION_NAMES[scenario][condition]}
+      const condition=params.get('condition');if(['experimental','baseline'].includes(condition)&&CONDITION_NAMES[scenario][condition]){base.condition=condition;base.conditionName=CONDITION_NAMES[scenario][condition]}
       const cue=params.get('cue');if(['target-1','target-2'].includes(cue)){base.cueTargetId=cue;base.nonCueTargetId=cue==='target-1'?'target-2':'target-1'}
       const side=params.get('side');if(['left','right'].includes(side)){base.cueTargetSide=side;base.nonCueTargetSide=side==='left'?'right':'left'}
       const label=(params.get('label')||'').toUpperCase();if(['A','B'].includes(label)){base.cueTargetLabel=label;base.nonCueTargetLabel=label==='A'?'B':'A'}

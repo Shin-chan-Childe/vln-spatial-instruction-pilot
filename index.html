@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
   <title>VLN Spatial Instruction Pilot</title>
-  <meta name="description" content="Four-scene pilot for underspecified spatial navigation instructions.">
+  <meta name="description" content="Five-trial pilot for underspecified spatial navigation instructions.">
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23080d12'/%3E%3Cpath d='M15 45V19h8l9 14 9-14h8v26h-8V31l-9 13-9-13v14z' fill='%23b9d9e4'/%3E%3C/svg%3E">
   <script src="pilot-core.js"></script>
   <style>
@@ -15,16 +15,16 @@
   <main class="shell">
     <header class="top"><div class="brand"><span class="mark">VLN</span><span>Spatial Instruction Pilot</span></div><span class="internal">S1–S4</span></header>
     <section class="hero">
-      <article class="intro"><div class="eyebrow">Participant study</div><h1>Four short observation scenes.</h1><p class="lede">You will watch four fixed first-person movements. After each one, answer the same four questions about what the speaker most likely meant.</p><p class="privacy">Complete the scenes in the order shown. Your assignment stays fixed if you refresh or return later. No name or email address is collected.</p></article>
-      <aside class="status"><div class="eyebrow">Your pilot session</div><div class="id" id="participantId"></div><div class="progress"><span id="progressBar"></span></div><div class="progress-label" id="progressLabel"></div><div class="complete-note" id="completeNote">All four scenes are complete. Thank you.</div><div class="scenes" id="scenes"></div><div class="actions"><button class="primary" id="continueButton">Begin pilot</button><button class="secondary" id="newButton" hidden>Start a new participant</button></div><div class="exports" id="exports" hidden><button class="secondary" id="jsonButton">Export JSON</button><button class="secondary" id="csvButton">Export CSV</button></div></aside>
+      <article class="intro"><div class="eyebrow">Participant study</div><h1>Five short observation scenes.</h1><p class="lede">You will watch five fixed first-person movements. After each one, answer the same four questions about what the speaker most likely meant.</p><p class="privacy">Complete the scenes in the order shown. Your assignment stays fixed if you refresh or return later. No name or email address is collected.</p></article>
+      <aside class="status"><div class="eyebrow">Your pilot session</div><div class="id" id="participantId"></div><div class="progress"><span id="progressBar"></span></div><div class="progress-label" id="progressLabel"></div><div class="complete-note" id="completeNote">All five scenes are complete. Thank you.</div><div class="scenes" id="scenes"></div><div class="actions"><button class="primary" id="continueButton">Begin pilot</button><button class="secondary" id="newButton" hidden>Start a new participant</button></div><div class="exports" id="exports" hidden><button class="secondary" id="jsonButton">Export JSON</button><button class="secondary" id="csvButton">Export CSV</button></div></aside>
     </section>
   </main>
   <script>
     const pilot=VLNPilot,participant=pilot.currentParticipant(),done=pilot.completedSet(participant.participantId),next=participant.scenarioOrder.find(s=>!done.has(s));
     document.querySelector('#participantId').textContent=participant.participantId;
-    document.querySelector('#progressBar').style.width=`${done.size/4*100}%`;
-    document.querySelector('#progressLabel').textContent=`${done.size} of 4 scenes complete`;
-    document.querySelector('#scenes').innerHTML=participant.scenarioOrder.map((s,i)=>`<div class="scene ${done.has(s)?'done':''}"><span class="num">${i+1}</span><span><strong>${s} · ${pilot.TITLES[s]}</strong><small>${done.has(s)?'Response recorded':'Pending'}</small></span><span class="badge">${done.has(s)?'Complete':''}</span></div>`).join('');
+    document.querySelector('#progressBar').style.width=`${done.size/5*100}%`;
+    document.querySelector('#progressLabel').textContent=`${done.size} of 5 scenes complete`;
+    document.querySelector('#scenes').innerHTML=participant.scenarioOrder.map((s,i)=>`<div class="scene ${done.has(s)?'done':''}"><span class="num">${i+1}</span><span><strong>${s==='B0'?'Final observation':`${s} · ${pilot.TITLES[s]}`}</strong><small>${done.has(s)?'Response recorded':'Pending'}</small></span><span class="badge">${done.has(s)?'Complete':''}</span></div>`).join('');
     const continueButton=document.querySelector('#continueButton');
     if(next){continueButton.textContent=done.size?'Continue pilot':'Begin pilot';continueButton.onclick=()=>location.href=pilot.ROUTES[next]}else{continueButton.style.display='none';document.querySelector('#completeNote').style.display='block'}
     const researcherMode=new URLSearchParams(location.search).get('admin')==='1';
