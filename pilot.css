@@ -1,0 +1,2 @@
+.pilot-debug-badge{position:fixed;z-index:1000;left:12px;bottom:12px;max-width:calc(100vw - 24px);padding:8px 11px;border:1px solid #d3a84d;border-radius:8px;background:rgba(24,18,7,.94);color:#ffe4a4;font:700 12px/1.35 ui-monospace,SFMono-Regular,Consolas,monospace;box-shadow:0 8px 28px rgba(0,0,0,.35)}
+.pilot-finish-actions{margin-top:28px}.pilot-next{display:inline-flex;align-items:center;justify-content:center;min-height:48px;padding:0 20px;border-radius:10px;background:#b9d9e4;color:#10181c;text-decoration:none;font-weight:800}.pilot-next:hover{filter:brightness(1.06)}

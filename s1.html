@@ -1,0 +1,735 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="A controlled spatial instruction study." />
+  <meta name="theme-color" content="#0b1117" />
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230b1117'/%3E%3Cpath d='M7 23V11h7v12M18 23V7h7v16' fill='none' stroke='%2378a8a1' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E" />
+  <title>Spatial Instruction Study</title>
+  <link rel="stylesheet" href="pilot.css" />
+  <script src="pilot-core.js"></script>
+  <style>
+    :root {
+      color-scheme: dark;
+      --ink: #eef3f5;
+      --muted: #9cabb4;
+      --panel: rgba(16, 24, 31, 0.94);
+      --panel-solid: #10181f;
+      --line: #2b3942;
+      --accent: #79a9a3;
+      --accent-strong: #a7cdc8;
+      --danger: #e9a6a6;
+      --bg: #080d12;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { margin: 0; min-height: 100%; background: var(--bg); color: var(--ink); }
+    body {
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.5;
+      overflow-x: hidden;
+    }
+    button, textarea, input { font: inherit; }
+    button { cursor: pointer; }
+
+    .app { min-height: 100dvh; position: relative; }
+    .topbar {
+      position: fixed;
+      z-index: 30;
+      inset: 0 0 auto 0;
+      height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 clamp(18px, 4vw, 56px);
+      border-bottom: 1px solid rgba(255,255,255,.08);
+      background: rgba(8,13,18,.88);
+      backdrop-filter: blur(16px);
+    }
+    .brand { display: flex; align-items: center; gap: 12px; font-weight: 650; letter-spacing: -.01em; }
+    .brand-mark {
+      width: 28px; height: 28px; border: 1px solid #44615f; border-radius: 7px;
+      display: grid; place-items: center; color: var(--accent-strong); font-size: 13px;
+    }
+    .study-meta { color: var(--muted); font-size: .82rem; letter-spacing: .04em; text-transform: uppercase; }
+
+    .intro, .finish {
+      min-height: 100dvh;
+      display: grid;
+      place-items: center;
+      padding: 96px 20px 40px;
+      background:
+        radial-gradient(circle at 50% 20%, rgba(79,112,110,.16), transparent 36%),
+        linear-gradient(180deg, #0b1218, #080d12 65%);
+    }
+    .intro-card, .finish-card {
+      width: min(680px, 100%);
+      border: 1px solid var(--line);
+      background: rgba(15,23,30,.83);
+      box-shadow: 0 30px 90px rgba(0,0,0,.34);
+      padding: clamp(28px, 6vw, 58px);
+      border-radius: 22px;
+    }
+    .eyebrow { color: var(--accent-strong); font-size: .79rem; letter-spacing: .13em; text-transform: uppercase; font-weight: 700; }
+    h1 { margin: 14px 0 16px; font-size: clamp(2.1rem, 7vw, 4.7rem); line-height: .98; letter-spacing: -.055em; max-width: 11ch; }
+    .lede { color: #c2ccd1; font-size: clamp(1rem, 2vw, 1.18rem); max-width: 54ch; }
+    .steps { display: grid; gap: 12px; margin: 30px 0 34px; padding: 0; list-style: none; counter-reset: study; }
+    .steps li { counter-increment: study; display: grid; grid-template-columns: 30px 1fr; gap: 12px; color: #bdc8ce; }
+    .steps li::before {
+      content: counter(study); width: 26px; height: 26px; border-radius: 50%; border: 1px solid #49615f;
+      display: grid; place-items: center; color: var(--accent-strong); font-size: .78rem; font-weight: 700;
+    }
+    .privacy-note { color: var(--muted); font-size: .9rem; margin: 0 0 24px; }
+    .primary {
+      border: 0; border-radius: 11px; background: var(--accent-strong); color: #071311; font-weight: 750;
+      padding: 14px 21px; min-height: 50px; box-shadow: 0 8px 30px rgba(93,151,143,.16);
+    }
+    .primary:hover { background: #bce1dc; }
+    .primary:focus-visible, .secondary:focus-visible, .choice:focus-visible, textarea:focus-visible, input:focus-visible {
+      outline: 3px solid rgba(167,205,200,.34); outline-offset: 2px;
+    }
+    .primary:disabled { opacity: .42; cursor: not-allowed; }
+    .secondary { border: 1px solid var(--line); color: var(--ink); background: transparent; border-radius: 9px; padding: 10px 14px; }
+
+    .experiment { min-height: 100dvh; padding-top: 64px; background: #05090c; }
+    .viewport-shell { position: relative; width: 100%; height: calc(100dvh - 64px); min-height: 540px; overflow: hidden; }
+    .scene-pane { position: absolute; inset: 0; min-width: 0; overflow: hidden; }
+    #scene { width: 100%; height: 100%; display: block; }
+    .scene-vignette { pointer-events: none; position: absolute; inset: 0; box-shadow: inset 0 0 100px 20px rgba(0,0,0,.48); }
+    .scene-status {
+      position: absolute; left: 24px; top: 22px; z-index: 4;
+      display: flex; align-items: center; gap: 10px;
+      color: #e1e7e9; font-size: .9rem; padding: 9px 13px; border-radius: 999px;
+      background: rgba(8,13,18,.64); border: 1px solid rgba(255,255,255,.12); backdrop-filter: blur(10px);
+    }
+    .status-pulse { width: 8px; height: 8px; border-radius: 50%; background: #9fb9b4; box-shadow: 0 0 0 5px rgba(159,185,180,.1); }
+    .progress-track { position: absolute; z-index: 5; left: 24px; right: 24px; bottom: 20px; height: 3px; background: rgba(255,255,255,.18); border-radius: 3px; overflow: hidden; }
+    .progress-fill { height: 100%; width: 0; background: var(--accent-strong); transform-origin: left; }
+    .chair-label {
+      position: absolute; z-index: 6; transform: translate(-50%, -50%); display: none;
+      background: rgba(7,12,16,.88); color: white; border: 1px solid rgba(255,255,255,.35);
+      border-radius: 8px; padding: 7px 11px; font-weight: 700; font-size: .88rem; box-shadow: 0 8px 26px rgba(0,0,0,.3);
+    }
+
+    .question-layer {
+      position: absolute; z-index: 10; inset: 0; display: none; align-items: flex-end; justify-content: center;
+      padding: 24px; background: linear-gradient(180deg, transparent 30%, rgba(3,7,10,.82));
+    }
+    .question-card {
+      width: min(760px, 100%); max-height: 84vh; overflow: auto;
+      background: var(--panel); border: 1px solid var(--line); border-radius: 18px;
+      padding: clamp(20px, 4vw, 34px); box-shadow: 0 24px 70px rgba(0,0,0,.48); backdrop-filter: blur(18px);
+    }
+    .viewport-shell.questions-active {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(390px, 520px);
+      background: #0a1015;
+    }
+    .questions-active .scene-pane { position: relative; inset: auto; height: 100%; }
+    .questions-active .question-layer {
+      position: relative; inset: auto; display: flex; align-items: center;
+      padding: 24px; background: #0a1015; border-left: 1px solid var(--line);
+    }
+    .questions-active .question-card {
+      max-height: calc(100dvh - 112px); background: #10181f; box-shadow: none;
+    }
+    .instruction {
+      display: inline-block; margin: 0 0 22px; padding: 11px 14px; border-left: 3px solid var(--accent);
+      color: #e7edef; background: rgba(121,169,163,.09); font-weight: 620;
+    }
+    .question-index { color: var(--accent-strong); text-transform: uppercase; letter-spacing: .12em; font-size: .75rem; font-weight: 750; }
+    h2 { margin: 8px 0 20px; font-size: clamp(1.35rem, 3vw, 1.9rem); line-height: 1.23; letter-spacing: -.025em; }
+    .choices { display: grid; gap: 10px; margin-bottom: 22px; }
+    .choice {
+      width: 100%; text-align: left; display: flex; align-items: center; gap: 13px;
+      border: 1px solid #34434c; color: #dce4e7; background: #121c23; border-radius: 11px; padding: 14px 15px; min-height: 52px;
+    }
+    .choice:hover { border-color: #66827f; background: #152229; }
+    .choice.selected { border-color: var(--accent-strong); background: rgba(121,169,163,.13); color: white; }
+    .choice-dot { width: 17px; height: 17px; border: 1px solid #718088; border-radius: 50%; flex: 0 0 auto; }
+    .choice.selected .choice-dot { border: 5px solid var(--accent-strong); }
+    .check .choice-dot { border-radius: 4px; }
+    .check.selected .choice-dot { background: var(--accent-strong); border-color: var(--accent-strong); box-shadow: inset 0 0 0 3px #152229; }
+    textarea, .other-input {
+      width: 100%; border: 1px solid #34434c; border-radius: 11px; background: #0d151b; color: white;
+      padding: 14px; min-height: 132px; resize: vertical; font-size: 1rem;
+    }
+    .other-input { min-height: auto; display: none; margin: -10px 0 18px; }
+    .question-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px; }
+    .validation { min-height: 24px; margin: 8px 0 0; color: var(--danger); font-size: .88rem; }
+
+    .preview-panel {
+      position: fixed; z-index: 50; top: 78px; right: 16px; width: min(310px, calc(100vw - 32px));
+      background: rgba(11,17,23,.96); border: 1px solid #3a4a54; border-radius: 14px; padding: 16px;
+      box-shadow: 0 20px 60px rgba(0,0,0,.4); display: none;
+    }
+    .preview-panel h3 { margin: 0 0 6px; font-size: 1rem; }
+    .preview-panel p { margin: 0 0 13px; color: var(--muted); font-size: .82rem; }
+    .preview-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 7px; }
+    .preview-grid button { border: 1px solid #3a4a54; border-radius: 8px; padding: 8px 5px; background: #121c23; color: #e7edef; }
+    .preview-row { display: flex; gap: 8px; margin-top: 9px; }
+    .preview-row button { flex: 1; }
+    .preview-value { margin-top: 11px; font-size: .78rem; color: #c3cdd2; }
+
+    .finish-card h1 { max-width: 12ch; }
+    .record-code { display: inline-block; margin-top: 16px; color: var(--muted); font: .85rem ui-monospace, SFMono-Regular, Menlo, monospace; }
+    .hidden { display: none !important; }
+
+    @media (max-width: 900px) {
+      .study-meta { display: none; }
+      .topbar { height: 58px; padding-inline: 16px; }
+      .experiment { padding-top: 58px; }
+      .viewport-shell { height: calc(100dvh - 58px); }
+      .viewport-shell.questions-active {
+        height: auto; min-height: calc(100dvh - 58px); overflow: visible;
+        grid-template-columns: 1fr; grid-template-rows: 42vh auto;
+      }
+      .questions-active .scene-pane { position: sticky; top: 58px; z-index: 2; height: 42vh; min-height: 280px; }
+      .question-layer { padding: 10px; }
+      .questions-active .question-layer {
+        min-height: calc(58vh - 58px); padding: 12px 10px 22px; border-left: 0; border-top: 1px solid var(--line);
+        align-items: flex-start;
+      }
+      .question-card { border-radius: 15px; max-height: 88vh; }
+      .questions-active .question-card { max-height: none; overflow: visible; width: 100%; }
+      .scene-status { left: 12px; top: 12px; }
+      .progress-track { left: 12px; right: 12px; bottom: 12px; }
+      .chair-label { font-size: .78rem; padding: 6px 8px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      * { scroll-behavior: auto !important; }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header class="topbar">
+      <div class="brand"><span class="brand-mark" aria-hidden="true">S1</span><span>Spatial Instruction Study</span></div>
+      <div class="study-meta">Anonymous · 2–4 minutes</div>
+    </header>
+
+    <section class="intro" id="intro">
+      <div class="intro-card">
+        <div class="eyebrow">Experiment instruction</div>
+        <h1>Observe, then decide.</h1>
+        <p class="lede">You will view a short indoor scene and answer four questions about a navigation instruction. You will have time to take in the room before anything moves, and the final view will remain available while you answer.</p>
+        <ol class="steps">
+          <li>Watch the scene without interacting with the camera.</li>
+          <li>Read the instruction that appears after the scene.</li>
+          <li>Answer the questions in order. There are no right or wrong answers.</li>
+        </ol>
+        <p class="privacy-note">Your response is anonymous. No name or email address is collected.</p>
+        <button class="primary" id="beginButton">Begin experiment</button>
+      </div>
+    </section>
+
+    <section class="experiment hidden" id="experiment" aria-label="Indoor observation scene">
+      <div class="viewport-shell" id="viewportShell">
+        <div class="scene-pane" id="scenePane">
+          <canvas id="scene"></canvas>
+          <div class="scene-vignette"></div>
+          <div class="scene-status"><span class="status-pulse"></span><span id="statusText">Loading scene…</span></div>
+          <div class="progress-track" id="progressTrack"><div class="progress-fill" id="progressFill"></div></div>
+          <div class="chair-label" id="labelA">Chair A</div>
+          <div class="chair-label" id="labelB">Chair B</div>
+        </div>
+
+        <div class="question-layer" id="questionLayer">
+          <section class="question-card" aria-live="polite">
+            <p class="instruction">“Go to the chair and stop beside it.”</p>
+            <div id="questionContent"></div>
+          </section>
+        </div>
+      </div>
+    </section>
+
+    <section class="finish hidden" id="finish">
+      <div class="finish-card">
+        <div class="eyebrow">Complete</div>
+        <h1>Thank you.</h1>
+        <p class="lede">Your response has been recorded.</p>
+        <span class="record-code" id="recordCode"></span>
+      </div>
+    </section>
+
+    <aside class="preview-panel" id="previewPanel" aria-label="Researcher preview controls">
+      <h3>Researcher preview</h3>
+      <p>Inspect visibility at each controlled moment. These controls never appear in the participant link.</p>
+      <div class="preview-grid">
+        <button data-frame="0">t0</button><button data-frame="1">t1</button><button data-frame="2">t2</button><button data-frame="3">t3</button>
+      </div>
+      <div class="preview-row">
+        <button class="secondary" id="conditionButton">Visibility unequal</button>
+        <button class="secondary" id="toggleSide">Cue: left</button>
+      </div>
+      <div class="preview-row">
+        <button class="secondary" id="replayButton">Replay</button>
+        <button class="secondary" id="exportButton">Export pilot JSON</button>
+      </div>
+      <div class="preview-value" id="previewValue"></div>
+    </aside>
+  </main>
+
+  <script type="module">
+    import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js';
+
+    const CONFIG = {
+      durationMs: 7200,
+      settleMs: 3000,
+      decisionHoldMs: 4000,
+      baselineObserveMs: 5000,
+      chair: {
+        left: new THREE.Vector3(-3.15, 0, -3.45),
+        right: new THREE.Vector3(3.15, 0, -3.45),
+        rotationY: 0
+      },
+      camera: {
+        height: 1.66,
+        keyframes: [
+          { t: 0, position: new THREE.Vector3(0, 1.66, 8.2) },
+          { t: 0.30, position: new THREE.Vector3(0, 1.66, 6.45) },
+          { t: 0.62, position: new THREE.Vector3(0, 1.66, 4.92) },
+          { t: 1, position: new THREE.Vector3(0, 1.66, 1.00) }
+        ],
+        lookAt: new THREE.Vector3(0, 1.04, -3.05)
+      },
+      occluder: {
+        xMagnitude: 1.30,
+        z: 1.50,
+        width: .80,
+        depth: .80,
+        height: 3.5
+      },
+      hall: { width: 15, depth: 20, height: 4.3 }
+    };
+
+    const params = new URLSearchParams(location.search);
+    const isPreview = params.get('preview') === '1';
+    const pilotAssignment=VLNPilot.assignmentFor('S1');
+    const assignment={condition:pilotAssignment.condition,group:'trajectory',persistentSide:pilotAssignment.cueTargetSide,occludedSide:pilotAssignment.nonCueTargetSide,persistentLabel:pilotAssignment.cueTargetLabel,occludedLabel:pilotAssignment.nonCueTargetLabel};
+
+    const participantId = pilotAssignment.participantId;
+    const state = {
+      stage: 'intro', question: 1, answer1: '', answer2: '', answer3: '', factors: [], other: '',
+      watchStartedAt: null, watchEndedAt: null, questionShownAt: null, q1SubmittedAt: null,
+      playbackStart: null, playing: false, holdingFinal: false, progress: 0
+    };
+
+    const intro = document.querySelector('#intro');
+    const experiment = document.querySelector('#experiment');
+    const finish = document.querySelector('#finish');
+    const beginButton = document.querySelector('#beginButton');
+    const questionLayer = document.querySelector('#questionLayer');
+    const questionContent = document.querySelector('#questionContent');
+    const statusText = document.querySelector('#statusText');
+    const progressTrack = document.querySelector('#progressTrack');
+    const progressFill = document.querySelector('#progressFill');
+    const labelA = document.querySelector('#labelA');
+    const labelB = document.querySelector('#labelB');
+    const previewPanel = document.querySelector('#previewPanel');
+    const previewValue = document.querySelector('#previewValue');
+
+    let renderer, scene, camera, clock, chairA, chairB, occluder, occluderBase, animationId;
+
+    function makeMaterial(color, roughness = .76, metalness = .03) {
+      return new THREE.MeshStandardMaterial({ color, roughness, metalness });
+    }
+
+    function addBox(parent, size, position, material, radius = 0) {
+      const mesh = new THREE.Mesh(new THREE.BoxGeometry(size.x, size.y, size.z, 2, 2, 2), material);
+      mesh.position.copy(position);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      parent.add(mesh);
+      return mesh;
+    }
+
+    function createChair(position) {
+      const root = new THREE.Group();
+      const upholstery = makeMaterial(0x365762, .88);
+      const frame = makeMaterial(0x20272c, .45, .35);
+      addBox(root, new THREE.Vector3(1.18, .18, 1.06), new THREE.Vector3(0, .93, 0), upholstery);
+      addBox(root, new THREE.Vector3(1.18, 1.12, .18), new THREE.Vector3(0, 1.53, .44), upholstery);
+      [-.47, .47].forEach(x => [-.38, .38].forEach(z => {
+        addBox(root, new THREE.Vector3(.1, .82, .1), new THREE.Vector3(x, .43, z), frame);
+      }));
+      addBox(root, new THREE.Vector3(1.06, .08, .08), new THREE.Vector3(0, .08, -.38), frame);
+      root.position.copy(position);
+      root.rotation.y = CONFIG.chair.rotationY;
+      scene.add(root);
+      return root;
+    }
+
+    function initScene() {
+      const canvas = document.querySelector('#scene');
+      renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
+      renderer.setPixelRatio(Math.min(devicePixelRatio, 1.75));
+      renderer.outputColorSpace = THREE.SRGBColorSpace;
+      renderer.shadowMap.enabled = true;
+      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+      renderer.toneMapping = THREE.ACESFilmicToneMapping;
+      renderer.toneMappingExposure = 1.06;
+
+      scene = new THREE.Scene();
+      scene.background = new THREE.Color(0x131a1e);
+      scene.fog = new THREE.Fog(0x131a1e, 13, 27);
+      camera = new THREE.PerspectiveCamera(55, 1, .1, 80);
+      clock = new THREE.Clock();
+
+      const floor = new THREE.Mesh(new THREE.PlaneGeometry(CONFIG.hall.width, CONFIG.hall.depth), makeMaterial(0x8f9290, .95));
+      floor.rotation.x = -Math.PI / 2;
+      floor.position.z = 1;
+      floor.receiveShadow = true;
+      scene.add(floor);
+
+      const wallMat = makeMaterial(0xd8d5cc, .92);
+      addBox(scene, new THREE.Vector3(CONFIG.hall.width, CONFIG.hall.height, .22), new THREE.Vector3(0, CONFIG.hall.height / 2, -7), wallMat);
+      addBox(scene, new THREE.Vector3(.22, CONFIG.hall.height, CONFIG.hall.depth), new THREE.Vector3(-7.5, CONFIG.hall.height / 2, 1), wallMat);
+      addBox(scene, new THREE.Vector3(.22, CONFIG.hall.height, CONFIG.hall.depth), new THREE.Vector3(7.5, CONFIG.hall.height / 2, 1), wallMat);
+
+      const insetMat = makeMaterial(0x56636a, .78);
+      [-4.8, 4.8].forEach(x => {
+        addBox(scene, new THREE.Vector3(2.8, 2.25, .12), new THREE.Vector3(x, 1.7, -6.84), insetMat);
+        addBox(scene, new THREE.Vector3(2.25, .11, .42), new THREE.Vector3(x, .56, -6.65), makeMaterial(0x252c30, .5, .1));
+      });
+
+      const ceiling = new THREE.Mesh(new THREE.PlaneGeometry(CONFIG.hall.width, CONFIG.hall.depth), makeMaterial(0xc3c2bd, .9));
+      ceiling.rotation.x = Math.PI / 2;
+      ceiling.position.set(0, CONFIG.hall.height, 1);
+      scene.add(ceiling);
+
+      const rug = new THREE.Mesh(new THREE.PlaneGeometry(7.9, 4.8), makeMaterial(0x343d3f, 1));
+      rug.rotation.x = -Math.PI / 2;
+      rug.position.set(0, .012, -2.7);
+      rug.receiveShadow = true;
+      scene.add(rug);
+
+      chairA = createChair(CONFIG.chair.left);
+      chairB = createChair(CONFIG.chair.right);
+
+      const occX = 0;
+      occluder = addBox(
+        scene,
+        new THREE.Vector3(CONFIG.occluder.width, CONFIG.occluder.height, CONFIG.occluder.depth),
+        new THREE.Vector3(occX, CONFIG.occluder.height / 2, CONFIG.occluder.z),
+        makeMaterial(0xb8b8b2, .9)
+      );
+      occluderBase = addBox(scene, new THREE.Vector3(CONFIG.occluder.width + .13, .12, CONFIG.occluder.depth + .13), new THREE.Vector3(occX, .06, CONFIG.occluder.z), makeMaterial(0x656965, .72));
+      occluderBase.castShadow = true;
+      applyAssignment();
+
+      const hemi = new THREE.HemisphereLight(0xeaf1f2, 0x586068, 1.8);
+      scene.add(hemi);
+      const key = new THREE.DirectionalLight(0xfff5df, 3.4);
+      key.position.set(-2.5, 7, 6);
+      key.castShadow = true;
+      key.shadow.mapSize.set(1536, 1536);
+      key.shadow.camera.left = -8; key.shadow.camera.right = 8; key.shadow.camera.top = 8; key.shadow.camera.bottom = -8;
+      scene.add(key);
+
+      [-4.6, 0, 4.6].forEach(x => [5.6, .2, -5.2].forEach(z => {
+        const light = new THREE.PointLight(0xfff6e8, 16, 9, 1.8);
+        light.position.set(x, 3.95, z);
+        scene.add(light);
+        const panel = new THREE.Mesh(new THREE.BoxGeometry(1.8, .035, .42), new THREE.MeshBasicMaterial({ color: 0xf5ead8 }));
+        panel.position.set(x, 4.15, z);
+        scene.add(panel);
+      }));
+
+      const planterMat = makeMaterial(0x727875, .85);
+      [-6.35, 6.35].forEach(x => {
+        addBox(scene, new THREE.Vector3(.78, .68, .78), new THREE.Vector3(x, .34, -4.9), planterMat);
+        const plant = new THREE.Mesh(new THREE.SphereGeometry(.68, 12, 8), makeMaterial(0x435748, 1));
+        plant.scale.y = 1.35; plant.position.set(x, 1.16, -4.9); plant.castShadow = true; scene.add(plant);
+      });
+
+      setCameraAt(0);
+      resize();
+      window.addEventListener('resize', resize);
+      animate();
+      statusText.textContent = 'Ready to observe';
+    }
+
+    function applyAssignment(){
+      if(!chairA||!chairB||!occluder||!occluderBase)return;
+      const cuePosition=CONFIG.chair[assignment.persistentSide],otherPosition=CONFIG.chair[assignment.occludedSide];
+      chairA.position.copy(assignment.persistentLabel==='A'?cuePosition:otherPosition);
+      chairB.position.copy(assignment.persistentLabel==='B'?cuePosition:otherPosition);
+      const experimental=assignment.condition==='experimental';
+      const x=experimental?(assignment.occludedSide==='right'?1:-1)*CONFIG.occluder.xMagnitude:0;
+      const z=experimental?CONFIG.occluder.z:-6.25;
+      occluder.position.set(x,CONFIG.occluder.height/2,z);occluderBase.position.set(x,.06,z);
+      updatePreviewReadout();
+    }
+
+    function resize() {
+      if (!renderer) return;
+      const shell = document.querySelector('#scenePane');
+      const width = shell.clientWidth;
+      const height = shell.clientHeight;
+      renderer.setSize(width, height, false);
+      camera.aspect = width / height;
+      const horizontalFov = THREE.MathUtils.degToRad(state.stage === 'questions' ? 92 : 82);
+      const responsiveFov = THREE.MathUtils.radToDeg(2 * Math.atan(Math.tan(horizontalFov / 2) / camera.aspect));
+      camera.fov = Math.max(50, Math.min(94, responsiveFov));
+      camera.updateProjectionMatrix();
+    }
+
+    function easeInOut(t) { return t < .5 ? 4*t*t*t : 1 - Math.pow(-2*t + 2, 3) / 2; }
+
+    function cameraPositionAt(progress) {
+      const frames = CONFIG.camera.keyframes;
+      for (let i = 0; i < frames.length - 1; i++) {
+        if (progress <= frames[i + 1].t) {
+          const local = (progress - frames[i].t) / (frames[i + 1].t - frames[i].t);
+          return new THREE.Vector3().lerpVectors(frames[i].position, frames[i + 1].position, easeInOut(Math.max(0, Math.min(1, local))));
+        }
+      }
+      return frames.at(-1).position.clone();
+    }
+
+    function setCameraAt(progress) {
+      state.progress = Math.max(0, Math.min(1, progress));
+      camera.position.copy(cameraPositionAt(state.progress));
+      camera.lookAt(CONFIG.camera.lookAt);
+      progressFill.style.width = `${state.progress * 100}%`;
+      updateLabels();
+      if (isPreview) updatePreviewReadout();
+    }
+
+    function animate(now = performance.now()) {
+      animationId = requestAnimationFrame(animate);
+      if (state.playing) {
+        const elapsed = now - state.playbackStart;
+        if (elapsed < 0) {
+          setCameraAt(0);
+          statusText.textContent = 'Take a moment to observe the room';
+          renderer.render(scene, camera);
+          return;
+        }
+        const progress = Math.min(1, elapsed / CONFIG.durationMs);
+        setCameraAt(progress);
+        statusText.textContent = 'Observation in progress';
+        if (progress >= 1) endObservation();
+      }
+      renderer.render(scene, camera);
+      updateLabels();
+    }
+
+    function startExperiment() {
+      intro.classList.add('hidden');
+      experiment.classList.remove('hidden');
+      resize();
+      state.watchStartedAt = performance.now();
+      if (assignment.group === 'trajectory') {
+        setCameraAt(0);
+        state.playbackStart = performance.now() + CONFIG.settleMs;
+        state.playing = true;
+        statusText.textContent = 'Take a moment to observe the room';
+      } else {
+        setCameraAt(1);
+        state.playing = false;
+        statusText.textContent = 'Take a moment to observe the room';
+        progressTrack.classList.add('hidden');
+        setTimeout(endObservation, CONFIG.baselineObserveMs);
+      }
+    }
+
+    function endObservation() {
+      if (state.stage === 'questions') return;
+      if (isPreview) {
+        state.stage = 'questions';
+        state.playing = false;
+        setCameraAt(1);
+        statusText.textContent = 'Preview · t3';
+        progressTrack.classList.add('hidden');
+        labelA.style.display = 'block';
+        labelB.style.display = 'block';
+        questionLayer.style.display = 'none';
+        return;
+      }
+      if (assignment.group === 'trajectory' && !state.holdingFinal) {
+        state.holdingFinal = true;
+        state.playing = false;
+        setCameraAt(1);
+        state.watchEndedAt = performance.now();
+        statusText.textContent = 'Observe the final view';
+        progressTrack.classList.add('hidden');
+        setTimeout(showQuestions, CONFIG.decisionHoldMs);
+        return;
+      }
+      state.watchEndedAt = state.watchEndedAt || performance.now();
+      showQuestions();
+    }
+
+    function showQuestions() {
+      if (state.stage === 'questions') return;
+      state.stage = 'questions';
+      state.playing = false;
+      setCameraAt(1);
+      statusText.textContent = 'Decision point';
+      progressTrack.classList.add('hidden');
+      document.querySelector('#viewportShell').classList.add('questions-active');
+      labelA.style.display = 'block';
+      labelB.style.display = 'block';
+      state.questionShownAt = performance.now();
+      renderQuestion();
+      questionLayer.style.display = 'flex';
+      requestAnimationFrame(resize);
+    }
+
+    function projectLabel(object, element) {
+      if (!camera || element.style.display === 'none') return;
+      const point = new THREE.Vector3();
+      object.getWorldPosition(point);
+      point.y += 2.25;
+      point.project(camera);
+      const shell = document.querySelector('#scenePane');
+      element.style.left = `${(point.x * .5 + .5) * shell.clientWidth}px`;
+      element.style.top = `${(-point.y * .5 + .5) * shell.clientHeight}px`;
+    }
+
+    function updateLabels() {
+      if (!chairA || state.stage !== 'questions') return;
+      projectLabel(chairA, labelA);
+      projectLabel(chairB, labelB);
+    }
+
+    function renderQuestion() {
+      const commonTop = `<div class="question-index">Question ${state.question} of 4</div>`;
+      if (state.question === 1) {
+        questionContent.innerHTML = `${commonTop}<h2>${VLNPilot.QUESTIONS.q1}</h2>${radioChoices('q1', ['Chair A','Chair B','Cannot judge'], state.answer1)}<div class="validation" id="validation"></div><div class="question-actions"><button class="primary" id="next" ${state.answer1 ? '' : 'disabled'}>Continue</button></div>`;
+      } else if (state.question === 2) {
+        questionContent.innerHTML = `${commonTop}<h2>${VLNPilot.QUESTIONS.q2}</h2>${radioChoices('q2', ['Chair A','Chair B'], state.answer2)}<div class="validation" id="validation"></div><div class="question-actions"><button class="primary" id="next" ${state.answer2 ? '' : 'disabled'}>Continue</button></div>`;
+      } else if (state.question === 3) {
+        questionContent.innerHTML = `${commonTop}<h2>${VLNPilot.QUESTIONS.q3}</h2><textarea id="reason" aria-label="Reason for your choice" placeholder="Write your reason here…" maxlength="1200">${escapeHtml(state.answer3)}</textarea><div class="validation" id="validation"></div><div class="question-actions"><button class="primary" id="next" ${state.answer3.trim() ? '' : 'disabled'}>Continue</button></div>`;
+      } else {
+        const factors = VLNPilot.FACTORS;
+        questionContent.innerHTML = `${commonTop}<h2>${VLNPilot.QUESTIONS.q4}</h2><div class="choices">${factors.map(f => `<button class="choice check ${state.factors.includes(f) ? 'selected' : ''}" data-factor="${escapeAttr(f)}" aria-pressed="${state.factors.includes(f)}"><span class="choice-dot"></span><span>${f}</span></button>`).join('')}</div><input class="other-input" id="otherInput" aria-label="Other factor" placeholder="Please specify" maxlength="300" value="${escapeAttr(state.other)}" style="display:${state.factors.includes('Other') ? 'block' : 'none'}"><div class="validation" id="validation"></div><div class="question-actions"><button class="primary" id="submit" ${state.factors.length ? '' : 'disabled'}>Submit response</button></div>`;
+      }
+      bindQuestion();
+    }
+
+    function radioChoices(name, choices, selected) {
+      return `<div class="choices">${choices.map(value => `<button class="choice ${selected === value ? 'selected' : ''}" data-radio="${name}" data-value="${escapeAttr(value)}" aria-pressed="${selected === value}"><span class="choice-dot"></span><span>${value}</span></button>`).join('')}</div>`;
+    }
+
+    function bindQuestion() {
+      questionContent.querySelectorAll('[data-radio]').forEach(button => button.addEventListener('click', () => {
+        if (button.dataset.radio === 'q1') state.answer1 = button.dataset.value;
+        else state.answer2 = button.dataset.value;
+        renderQuestion();
+      }));
+      const reason = document.querySelector('#reason');
+      if (reason) reason.addEventListener('input', () => {
+        state.answer3 = reason.value;
+        document.querySelector('#next').disabled = !state.answer3.trim();
+      });
+      questionContent.querySelectorAll('[data-factor]').forEach(button => button.addEventListener('click', () => {
+        const factor = button.dataset.factor;
+        state.factors = state.factors.includes(factor) ? state.factors.filter(f => f !== factor) : [...state.factors, factor];
+        renderQuestion();
+      }));
+      const otherInput = document.querySelector('#otherInput');
+      if (otherInput) otherInput.addEventListener('input', () => { state.other = otherInput.value; });
+      const next = document.querySelector('#next');
+      if (next) next.addEventListener('click', () => {
+        if (state.question === 1) {
+          if (!state.answer1) return;
+          state.q1SubmittedAt = performance.now();
+        }
+        if (state.question === 2 && !state.answer2) return;
+        if (state.question === 3 && !state.answer3.trim()) {
+          document.querySelector('#validation').textContent = 'Please provide a brief reason before continuing.';
+          return;
+        }
+        state.question += 1;
+        renderQuestion();
+      });
+      const submit = document.querySelector('#submit');
+      if (submit) submit.addEventListener('click', submitResponse);
+    }
+
+    function submitResponse() {
+      if (!state.factors.length) return;
+      if (state.factors.includes('Other') && !state.other.trim()) {
+        document.querySelector('#validation').textContent = 'Please specify the other factor.';
+        return;
+      }
+      const response = {
+        instruction: 'Go to the chair and stop beside it.',
+        q1Answer: state.answer1,
+        q2Answer: state.answer2,
+        q3FreeText: state.answer3.trim(),
+        q4Factors: state.factors,
+        q4Other: state.other.trim() || null,
+        observationDurationMs: Math.round(state.watchEndedAt - state.playbackStart),
+        q1ResponseTimeMs: Math.round(state.q1SubmittedAt - state.questionShownAt),
+        questionnaireDurationMs: Math.round(performance.now() - state.questionShownAt),
+        sceneMetrics: { cueVisibleThroughout: true, nonCueVisibleThroughout: assignment.condition === 'baseline', occluderCount: 1 }
+      };
+      const result=VLNPilot.saveResponse(response,pilotAssignment);
+      experiment.classList.add('hidden');
+      finish.classList.remove('hidden');
+      VLNPilot.finishUI(pilotAssignment,result);
+      state.stage = 'complete';
+    }
+
+    function escapeHtml(value) {
+      return String(value).replace(/[&<>'"]/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[char]));
+    }
+    function escapeAttr(value) { return escapeHtml(value); }
+
+    function enablePreview() {
+      previewPanel.style.display = 'block';
+      document.querySelector('#conditionButton').textContent = assignment.condition==='experimental'?'Visibility unequal':'Visibility equal';
+      document.querySelector('#toggleSide').textContent = `Cue: ${assignment.persistentSide}`;
+      document.querySelectorAll('[data-frame]').forEach(button => button.addEventListener('click', () => {
+        const frame = Number(button.dataset.frame);
+        const progress = [0, .16, .62, 1][frame];
+        state.playing = false;
+        state.stage = frame === 3 ? 'questions' : 'preview';
+        labelA.style.display = frame === 3 ? 'block' : 'none';
+        labelB.style.display = frame === 3 ? 'block' : 'none';
+        questionLayer.style.display = 'none';
+        setCameraAt(progress);
+        statusText.textContent = `Preview · t${frame}`;
+      }));
+      document.querySelector('#replayButton').addEventListener('click', () => {
+        state.stage = 'preview'; state.playing = true; state.playbackStart = performance.now();
+        labelA.style.display = 'none'; labelB.style.display = 'none'; questionLayer.style.display = 'none'; progressTrack.classList.remove('hidden');
+      });
+      document.querySelector('#exportButton').addEventListener('click', VLNPilot.exportJSON);
+      document.querySelector('#conditionButton').addEventListener('click',()=>{
+        assignment.condition=assignment.condition==='experimental'?'baseline':'experimental';
+        document.querySelector('#conditionButton').textContent=assignment.condition==='experimental'?'Visibility unequal':'Visibility equal';
+        applyAssignment();
+      });
+      document.querySelector('#toggleSide').addEventListener('click', () => {
+        assignment.persistentSide=assignment.persistentSide==='right'?'left':'right';
+        assignment.occludedSide=assignment.persistentSide==='right'?'left':'right';
+        document.querySelector('#toggleSide').textContent = `Cue: ${assignment.persistentSide}`;
+        applyAssignment();
+      });
+      updatePreviewReadout();
+    }
+
+    function updatePreviewReadout() {
+      if (!previewValue) return;
+      const count = VLNPilot.allData().responses.length;
+      previewValue.textContent = `${assignment.condition} · cue ${assignment.persistentSide} / Chair ${assignment.persistentLabel} · progress ${(state.progress * 100).toFixed(0)}% · records ${count}`;
+    }
+
+    beginButton.addEventListener('click', startExperiment);
+    initScene();
+    VLNPilot.debugBadge(pilotAssignment);
+    if (isPreview) {
+      startExperiment();
+      enablePreview();
+    }
+
+  </script>
+</body>
+</html>
