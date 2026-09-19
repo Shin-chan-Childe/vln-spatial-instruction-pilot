@@ -31,7 +31,7 @@
     <aside class="validation-drawer" id="validationDrawer"><h3>Variable check</h3><canvas id="topdown" width="720" height="560"></canvas><div class="metrics"><div class="metric"><strong id="distanceMetric">3.90 / 5.80 m</strong><span>Near / far distance</span></div><div class="metric"><strong>±18°</strong><span>Heading offsets</span></div><div class="metric"><strong id="deltaMetric">1.90 m</strong><span>Distance difference</span></div><div class="metric"><strong id="sizeMetric">1.49×</strong><span>Natural size ratio risk</span></div></div><div class="artifact-gallery" id="artifactGallery"></div></aside>
   </main>
   <script type="module">
-    import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js';
+import * as THREE from './three.module.js';
     const CONFIG={durationMs:6200,settleMs:3000,decisionHoldMs:4000,cameraStart:new THREE.Vector3(0,1.66,10),decisionPoint:new THREE.Vector3(0,1.66,3),nearRadius:3.9,farRadius:5.8,angleDeg:18,hall:{width:17,depth:25,height:4.5}};
     const params=new URLSearchParams(location.search),isPreview=params.get('preview')==='1';
     const pilotAssignment=VLNPilot.assignmentFor('S4');
