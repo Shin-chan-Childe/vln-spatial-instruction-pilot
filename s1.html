@@ -171,6 +171,22 @@
     .preview-row { display: flex; gap: 8px; margin-top: 9px; }
     .preview-row button { flex: 1; }
     .preview-value { margin-top: 11px; font-size: .78rem; color: #c3cdd2; }
+    .validation-drawer {
+      position: fixed; z-index: 49; left: 16px; top: 78px; width: min(400px, calc(100vw - 32px));
+      max-height: calc(100dvh - 94px); overflow: auto; display: none; padding: 14px;
+      border: 1px solid #3a4a54; border-radius: 14px; background: rgba(11,17,23,.97);
+    }
+    .validation-drawer h3 { margin: 0 0 10px; }
+    #topdown { width: 100%; height: auto; display: block; border-radius: 10px; background: #eef1ed; }
+    .metrics { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; margin-top: 10px; }
+    .metric { padding: 9px; border: 1px solid #314049; border-radius: 9px; background: #111c22; }
+    .metric strong { display: block; font-size: .92rem; }
+    .metric span { color: var(--muted); font-size: .72rem; }
+    .artifact-gallery { display: grid; gap: 10px; margin-top: 12px; }
+    .artifact-gallery figure { margin: 0; }
+    .artifact-gallery img,.artifact-gallery video { width: 100%; display: block; border-radius: 9px; border: 1px solid #33434b; }
+    .artifact-gallery figcaption { margin-top: 4px; color: var(--muted); font-size: .76rem; }
+    .artifact-gallery a { color: var(--accent-strong); }
 
     .finish-card h1 { max-width: 12ch; }
     .record-code { display: inline-block; margin-top: 16px; color: var(--muted); font: .85rem ui-monospace, SFMono-Regular, Menlo, monospace; }
@@ -265,18 +281,32 @@
         <button class="secondary" id="toggleSide">Cue: left</button>
       </div>
       <div class="preview-row">
-        <button class="secondary" id="replayButton">Replay</button>
+        <button class="secondary" id="questionButton">Question page</button>
+        <button class="secondary" id="replayButton">Replay 6.2 s</button>
+      </div>
+      <div class="preview-row">
+        <button class="secondary" id="layoutButton">Layout + metrics</button>
+        <button class="secondary" id="recordButton">Record WebM</button>
+      </div>
+      <div class="preview-row">
         <button class="secondary" id="exportButton">Export pilot JSON</button>
       </div>
       <div class="preview-value" id="previewValue"></div>
+    </aside>
+    <aside class="validation-drawer" id="validationDrawer">
+      <h3>Variable check</h3>
+      <canvas id="topdown" width="720" height="540"></canvas>
+      <div class="metrics"><div class="metric"><strong>4.45 / 4.45 m</strong><span>Final camera-to-chair distance</span></div><div class="metric"><strong>±45°</strong><span>Final heading relation</span></div><div class="metric"><strong id="visibilityMetric">persistent / interrupted</strong><span>Visibility history</span></div><div class="metric"><strong>clear / clear</strong><span>Final visibility</span></div></div>
+      <div class="artifact-gallery" id="artifactGallery"></div>
     </aside>
   </main>
 
   <script type="module">
 import * as THREE from './three.module.js';
 
+    const INSTRUCTION='Go to the chair and stop beside it.';
     const CONFIG = {
-      durationMs: 7200,
+      durationMs: 6200,
       settleMs: 3000,
       decisionHoldMs: 4000,
       baselineObserveMs: 5000,
@@ -332,7 +362,9 @@ import * as THREE from './three.module.js';
     const previewPanel = document.querySelector('#previewPanel');
     const previewValue = document.querySelector('#previewValue');
 
-    let renderer, scene, camera, clock, chairA, chairB, occluder, occluderBase, animationId;
+    const validationDrawer = document.querySelector('#validationDrawer');
+    const artifactGallery = document.querySelector('#artifactGallery');
+    let renderer, scene, camera, clock, chairA, chairB, occluder, occluderBase, animationId, mediaRecorder, recordChunks=[];
 
     function makeMaterial(color, roughness = .76, metalness = .03) {
       return new THREE.MeshStandardMaterial({ color, roughness, metalness });
@@ -660,7 +692,7 @@ import * as THREE from './three.module.js';
         return;
       }
       const response = {
-        instruction: 'Go to the chair and stop beside it.',
+        instruction: INSTRUCTION,
         q1Answer: state.answer1,
         q2Answer: state.answer2,
         q3FreeText: state.answer3.trim(),
@@ -692,6 +724,7 @@ import * as THREE from './three.module.js';
         const progress = [0, .16, .62, 1][frame];
         state.playing = false;
         state.stage = frame === 3 ? 'questions' : 'preview';
+        document.querySelector('#viewportShell').classList.remove('questions-active');
         labelA.style.display = frame === 3 ? 'block' : 'none';
         labelB.style.display = frame === 3 ? 'block' : 'none';
         questionLayer.style.display = 'none';
@@ -700,21 +733,28 @@ import * as THREE from './three.module.js';
       }));
       document.querySelector('#replayButton').addEventListener('click', () => {
         state.stage = 'preview'; state.playing = true; state.playbackStart = performance.now();
+        document.querySelector('#viewportShell').classList.remove('questions-active');
         labelA.style.display = 'none'; labelB.style.display = 'none'; questionLayer.style.display = 'none'; progressTrack.classList.remove('hidden');
       });
+      document.querySelector('#questionButton').addEventListener('click',showPreviewQuestion);
+      document.querySelector('#layoutButton').addEventListener('click',()=>{validationDrawer.style.display=validationDrawer.style.display==='block'?'none':'block';drawTopdown()});
+      document.querySelector('#recordButton').addEventListener('click',recordVideo);
       document.querySelector('#exportButton').addEventListener('click', VLNPilot.exportJSON);
       document.querySelector('#conditionButton').addEventListener('click',()=>{
         assignment.condition=assignment.condition==='experimental'?'baseline':'experimental';
         document.querySelector('#conditionButton').textContent=assignment.condition==='experimental'?'Visibility unequal':'Visibility equal';
         applyAssignment();
+        drawTopdown();
       });
       document.querySelector('#toggleSide').addEventListener('click', () => {
         assignment.persistentSide=assignment.persistentSide==='right'?'left':'right';
         assignment.occludedSide=assignment.persistentSide==='right'?'left':'right';
         document.querySelector('#toggleSide').textContent = `Cue: ${assignment.persistentSide}`;
         applyAssignment();
+        drawTopdown();
       });
       updatePreviewReadout();
+      drawTopdown();
     }
 
     function updatePreviewReadout() {
@@ -723,9 +763,30 @@ import * as THREE from './three.module.js';
       previewValue.textContent = `${assignment.condition} · cue ${assignment.persistentSide} / Chair ${assignment.persistentLabel} · progress ${(state.progress * 100).toFixed(0)}% · records ${count}`;
     }
 
+    function drawTopdown(){
+      const canvas=document.querySelector('#topdown'),ctx=canvas.getContext('2d'),W=canvas.width,H=canvas.height;
+      ctx.clearRect(0,0,W,H);ctx.fillStyle='#eef1ed';ctx.fillRect(0,0,W,H);
+      const ox=W/2,scale=30,zBase=380,xy=v=>[ox+v.x*scale,zBase-v.z*scale];
+      ctx.strokeStyle='#c5cbc7';ctx.lineWidth=2;ctx.strokeRect(ox-7.5*scale,zBase-7*scale,15*scale,17*scale);
+      const points=CONFIG.camera.keyframes.map(frame=>xy(frame.position));ctx.strokeStyle='#597770';ctx.lineWidth=7;ctx.beginPath();points.forEach((point,index)=>index?ctx.lineTo(...point):ctx.moveTo(...point));ctx.stroke();
+      const start=points[0],decision=points.at(-1);ctx.fillStyle='#294a44';ctx.beginPath();ctx.moveTo(decision[0],decision[1]-18);ctx.lineTo(decision[0]-9,decision[1]+2);ctx.lineTo(decision[0]+9,decision[1]+2);ctx.closePath();ctx.fill();
+      const left=xy(CONFIG.chair.left),right=xy(CONFIG.chair.right),occ=xy(occluder.position);function chair(point,label){ctx.fillStyle='#4b7180';ctx.fillRect(point[0]-17,point[1]-13,34,26);ctx.fillStyle='#172124';ctx.font='700 16px system-ui';ctx.fillText(label,point[0]+22,point[1]+5)}
+      chair(left,`${assignment.persistentSide==='left'?'Persistent':'Interrupted'} · Chair ${assignment.persistentSide==='left'?assignment.persistentLabel:assignment.occludedLabel}`);chair(right,`${assignment.persistentSide==='right'?'Persistent':'Interrupted'} · Chair ${assignment.persistentSide==='right'?assignment.persistentLabel:assignment.occludedLabel}`);
+      ctx.fillStyle='#b5a36d';ctx.fillRect(occ[0]-12,occ[1]-12,24,24);ctx.fillStyle='#172124';ctx.font='700 16px system-ui';ctx.fillText(assignment.condition==='experimental'?'Transient occluder':'Neutral divider',occ[0]+18,occ[1]+5);ctx.fillText('Start',start[0]+14,start[1]);ctx.fillText('Decision point',decision[0]+14,decision[1]+3);
+      document.querySelector('#visibilityMetric').textContent=assignment.condition==='experimental'?'persistent / interrupted':'persistent / persistent';
+    }
+
+    function showPreviewQuestion(){
+      state.playing=false;state.stage='preview';setCameraAt(1);document.querySelector('#viewportShell').classList.add('questions-active');labelA.style.display='block';labelB.style.display='block';state.question=1;renderQuestion();questionLayer.style.display='flex';statusText.textContent='Decision point';requestAnimationFrame(resize);
+    }
+
+    function recordVideo(){
+      if(mediaRecorder&&mediaRecorder.state!=='inactive')return;validationDrawer.style.display='block';recordChunks=[];const stream=renderer.domElement.captureStream(30),mime=MediaRecorder.isTypeSupported('video/webm;codecs=vp9')?'video/webm;codecs=vp9':'video/webm';mediaRecorder=new MediaRecorder(stream,{mimeType:mime,videoBitsPerSecond:5500000});mediaRecorder.ondataavailable=e=>{if(e.data.size)recordChunks.push(e.data)};mediaRecorder.onstop=()=>{const blob=new Blob(recordChunks,{type:'video/webm'}),url=URL.createObjectURL(blob),figure=document.createElement('figure');figure.innerHTML=`<video controls src="${url}"></video><figcaption>6.2-second fixed trajectory · <a href="${url}" download="s1-trajectory.webm">download WebM</a></figcaption>`;artifactGallery.appendChild(figure);document.querySelector('#recordButton').textContent='Record WebM'};document.querySelector('#viewportShell').classList.remove('questions-active');questionLayer.style.display='none';labelA.style.display='none';labelB.style.display='none';progressTrack.classList.remove('hidden');state.stage='preview';setCameraAt(0);state.playbackStart=performance.now();state.playing=true;document.querySelector('#recordButton').textContent='Recording…';mediaRecorder.start(250);setTimeout(()=>{state.playing=false;setCameraAt(1);if(mediaRecorder.state!=='inactive')mediaRecorder.stop()},CONFIG.durationMs+350);
+    }
+
     beginButton.addEventListener('click', startExperiment);
     initScene();
-    VLNPilot.debugBadge(pilotAssignment);
+    VLNPilot.debugBadge(pilotAssignment,{instruction:INSTRUCTION,manipulatedCue:'visibility persistence / visual history',mirrorCondition:`persistent-${assignment.persistentSide}`});
     if (isPreview) {
       startExperiment();
       enablePreview();

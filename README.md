@@ -21,6 +21,18 @@ The four guaranteed manipulations are:
 | S4 | Distance differs |
 | B0 | Final equal-visibility neutral baseline |
 
+The participant-facing instructions are intentionally cue-neutral wherever possible:
+
+| Scene | Instruction |
+| --- | --- |
+| S1 | `Go to the chair and stop beside it.` |
+| S2 | `Go to the chair and stop beside it.` |
+| S3 full | `Head toward the chair, pass it, and continue through the doorway.` |
+| S3 truncated baseline | `Head toward the chair.` |
+| S4 | `Go to the chair and stop beside it.` |
+
+No scene uses `circle around it`, and S2 does not use `go straight` or another phrase that directly names the heading cue.
+
 ## Local preview
 
 Serve `dist` with a static web server and open the root route. For example:
@@ -38,7 +50,7 @@ python -m http.server 4173 --directory dist
 
 All four scenes accept the same researcher parameters:
 
-- `debug=1` displays the resolved assignment.
+- `debug=1` displays a developer-only summary with scenario, instruction, manipulated cue, condition, cue target, side, A/B mapping, mirror, and save status.
 - `condition=experimental|baseline` overrides the scenario condition.
 - `cue=target-1|target-2` overrides the cue target identity.
 - `side=left|right` overrides the cue target side.
@@ -75,6 +87,6 @@ Run the browser smoke test against a local server:
 node scripts/test-pilot.mjs http://127.0.0.1:4173
 ```
 
-The scene capture helpers in `scripts/` use the standardized debug parameters and generate the existing validation artifacts for S2–S4.
+The scene capture helpers in `scripts/` use the standardized debug parameters and generate the validation artifacts for S1–S4: top-down map, start frame, decision frame, instruction page, baseline, mirror, and a 6.2-second WebM trajectory.
 
 Three.js is bundled with the static site, so scene startup does not depend on an external CDN.

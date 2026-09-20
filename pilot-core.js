@@ -113,7 +113,25 @@
   function download(name,text,type){const blob=new Blob([text],{type}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)}
   function exportJSON(){download(`vln-pilot-${new Date().toISOString().slice(0,10)}.json`,JSON.stringify({...load(),exportedAt:new Date().toISOString()},null,2),'application/json')}
   function exportCSV(){download(`vln-pilot-${new Date().toISOString().slice(0,10)}.csv`,csv(),'text/csv;charset=utf-8')}
-  function debugBadge(assignment){if(!assignment.debug)return;const badge=document.createElement('div');badge.className='pilot-debug-badge';badge.textContent=`DEBUG · ${assignment.scenario} · ${assignment.condition} · cue ${assignment.cueTargetId} / ${assignment.cueTargetSide} / ${assignment.cueTargetLabel}${assignment.saveDebug?' · saving':' · not saving'}`;document.body.appendChild(badge)}
+  function debugBadge(assignment,details={}){
+    if(!assignment.debug)return;
+    const summary=document.createElement('section');summary.className='pilot-debug-badge pilot-debug-summary';summary.setAttribute('aria-label','Developer debug summary');
+    const condition=assignment.condition==='experimental'?'main / experimental':'baseline';
+    const rows=[
+      ['Scenario',assignment.scenario],
+      ['Instruction',details.instruction||'—'],
+      ['Manipulated cue',details.manipulatedCue||'—'],
+      ['Condition',condition],
+      ['Cue target',assignment.cueTargetId],
+      ['Cue side',assignment.cueTargetSide],
+      ['Chair mapping',`${assignment.cueTargetId} = Chair ${assignment.cueTargetLabel}; ${assignment.nonCueTargetId} = Chair ${assignment.nonCueTargetLabel}`],
+      ['Mirror',details.mirrorCondition||`cue-${assignment.cueTargetSide}`],
+      ['Saving',assignment.saveDebug?'yes':'no']
+    ];
+    const title=document.createElement('strong');title.textContent='DEBUG SUMMARY';summary.appendChild(title);
+    rows.forEach(([label,value])=>{const row=document.createElement('div'),key=document.createElement('span'),text=document.createElement('b');key.textContent=`${label}: `;text.textContent=String(value);row.append(key,text);summary.appendChild(row)});
+    document.body.appendChild(summary)
+  }
   function finishUI(assignment,result){const finish=document.querySelector('#finish');if(!finish)return;const card=finish.querySelector('.finish-card'),code=finish.querySelector('#recordCode');if(code)code.textContent=result.debug?'Debug run · not recorded':`Participant · ${assignment.participantId}`;let actions=card.querySelector('.pilot-finish-actions');if(!actions){actions=document.createElement('div');actions.className='pilot-finish-actions';card.appendChild(actions)}const next=result.next||'index.html';actions.innerHTML=`<a class="pilot-next" href="${next}">${next==='index.html'?'Return to pilot':'Continue to next scene'}</a>`}
   window.VLNPilot={VERSION,SCENARIOS,ROUTES,TITLES,CONDITION_NAMES,QUESTIONS,FACTORS,load,save,createParticipant,currentParticipant,assignmentFor,saveResponse,nextRoute,completedSet,allData,exportJSON,exportCSV,debugBadge,finishUI};
 })();
